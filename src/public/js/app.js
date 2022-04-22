@@ -4,6 +4,9 @@ const welcome = document.querySelector("#welcome");
 const form = welcome.querySelector("form");
 const room = document.querySelector("#room");
 
+const changeName = room.querySelector("#change_name");
+const changeRoom = room.querySelector("#change_room");
+
 room.hidden = true;
 
 let roomName;
@@ -25,9 +28,13 @@ function handleMessageSubmit(event) {
   input.value = "";
 }
 
-function changeNickname() {
-  room.querySelector("#change").hidden = true;
+function changeNickname(event) {
+  changeName.hidden = true;
   room.querySelector("#name").hidden = false;
+  socket.emit("change_nickname","Anon");
+}
+function chatReload() {
+  window.location.reload();
 }
 
 function handleNicknameSubmit(event) {
@@ -37,18 +44,21 @@ function handleNicknameSubmit(event) {
   socket.emit("nickname", input.value);
   input.value = "";
   room.querySelector("#name").hidden = true;
-  room.querySelector("#change").hidden = false;
-  room.querySelector("#change").addEventListener("click",changeNickname);
+  changeName.hidden = false;
+  changeRoom.hidden = false;
+  changeName.addEventListener("click",changeNickname);
+  changeRoom.addEventListener("click", chatReload);
 }
 
-function showRoom() {
+function showRoom(newCount) {
   welcome.hidden = true;
   room.hidden = false;
   const h3 = room.querySelector("h3");
-  h3.innerText = `Room ${roomName}`;
+  h3.innerText = `${roomName} Room (${newCount})`;
   const msgForm = room.querySelector("#msg");
   const nameForm = room.querySelector("#name");
-  room.querySelector("#change").hidden = true;
+  changeName.hidden = true;
+  changeRoom.hidden = true;
   msgForm.addEventListener("submit", handleMessageSubmit);
   nameForm.addEventListener("submit", handleNicknameSubmit);
 }
@@ -63,12 +73,29 @@ function handleRoomSubmit(event) {
 }
 form.addEventListener("submit", handleRoomSubmit);
 
-socket.on("welcome", (user) => {
+socket.on("welcome", (user, newCount) => {
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room ${roomName} (${newCount})`;
   addMessage(`${user} joined`);
 });
 
-socket.on("bye", (user) => {
+socket.on("bye", (user, newCount) => {
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room ${roomName} (${newCount})`;
   addMessage(`${user} left`);
 })
 
 socket.on("new_message", addMessage);
+
+socket.on("room_change", (rooms) => {
+  const roomList = welcome.querySelector("ul");
+  roomList.innerHTML = "";
+  if(rooms.length === 0) {
+    return;
+  }
+  rooms.forEach(room => {
+    const li = document.createElement("li");
+    li.innerText = room;
+    roomList.append(li);
+  });
+});
